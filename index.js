@@ -3,8 +3,7 @@ const puppeteer = require('puppeteer');
 (async () => {
   console.log('Starting Puppeteer script...');
   const browser = await puppeteer.launch({
-    headless: false, // Show browser for debugging
-    executablePath: '/usr/bin/chromium-browser',
+    headless: true, // Use headless mode for server/VM
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   console.log('Browser launched.');
