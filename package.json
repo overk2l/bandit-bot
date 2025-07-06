@@ -1,14 +1,12 @@
 {
   "name": "bandit-bot",
   "version": "1.0.0",
-  "description": "A Discord bot that pings @rain when rain appears on bandit.camp.",
+  "description": "A Discord bot project.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "author": "overk2l",
   "license": "MIT",
-  "dependencies": {
-    "puppeteer": "^21.3.8"
-  }
+  "dependencies": {}
 }
