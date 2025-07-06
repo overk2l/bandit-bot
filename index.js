@@ -7,9 +7,9 @@ const client = new Client({
 });
 
 const ROLE_OPTIONS = [
-  { label: 'Role 1', value: 'role1_id' },
-  { label: 'Role 2', value: 'role2_id' },
-  { label: 'Role 3', value: 'role3_id' }
+  { label: 'Role 1', value: '1370533441724092537' },
+  { label: 'Role 2', value: '1370533436317761546' },
+  { label: 'Role 3', value: '1370533450704224447' }
 ];
 
 client.once('ready', () => {
