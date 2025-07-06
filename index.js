@@ -46,8 +46,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await member.roles.add(roleId);
       action = 'added';
     }
-    await interaction.reply({ content: `Role ${action}: ${role.name}`, flags: 64 }); // ephemeral
-    // No message edit, so no (edited) mark, and dropdown resets for user
+    // Build a new dropdown with no selection (reset)
+    const row = new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId('role_select')
+        .setPlaceholder('Select a role to toggle')
+        .addOptions(ROLE_OPTIONS)
+    );
+    await interaction.update({
+      content: `Role ${action}: ${role.name}\nChoose a role to toggle:`,
+      components: [row],
+    });
   }
 });
 
