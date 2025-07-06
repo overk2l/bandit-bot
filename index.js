@@ -35,7 +35,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const member = await interaction.guild.members.fetch(interaction.user.id);
     const role = interaction.guild.roles.cache.get(roleId);
     if (!role) {
-      await interaction.reply({ content: 'Role not found.', ephemeral: true });
+      await interaction.reply({ content: 'Role not found.', flags: 64 }); // ephemeral
       return;
     }
     let action;
@@ -46,7 +46,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await member.roles.add(roleId);
       action = 'added';
     }
-    await interaction.reply({ content: `Role ${action}: ${role.name}`, ephemeral: true });
+    await interaction.reply({ content: `Role ${action}: ${role.name}`, flags: 64 }); // ephemeral
     // No message edit, so no (edited) mark, and dropdown resets for user
   }
 });
