@@ -12,6 +12,26 @@ const ROLE_OPTIONS = [
   { label: 'Role 3', value: '1370533450704224447' }
 ];
 
+// Function to build role options with member counts
+function buildRoleOptions(guild) {
+  const options = ROLE_OPTIONS.map(roleOption => {
+    const role = guild.roles.cache.get(roleOption.value);
+    const memberCount = role ? role.members.size : 0;
+    return {
+      label: `${roleOption.label} 👤 ${memberCount}`,
+      value: roleOption.value
+    };
+  });
+  
+  // Add clear selection option
+  options.push({
+    label: '❌ Clear Selection',
+    value: 'clear_selection'
+  });
+  
+  return options;
+}
+
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
@@ -21,8 +41,8 @@ client.on('messageCreate', async (message) => {
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder('Select a role to toggle')
-        .addOptions(ROLE_OPTIONS)
+        .setPlaceholder('Make a selection')
+        .addOptions(buildRoleOptions(message.guild))
     );
     await message.channel.send({ content: 'Choose a role to toggle:', components: [row] });
   }
@@ -31,7 +51,25 @@ client.on('messageCreate', async (message) => {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isStringSelectMenu()) return;
   if (interaction.customId === 'role_select') {
-    const roleId = interaction.values[0];
+    const selectedValue = interaction.values[0];
+    
+    // Handle clear selection
+    if (selectedValue === 'clear_selection') {
+      const row = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('role_select')
+          .setPlaceholder('Make a selection')
+          .addOptions(buildRoleOptions(interaction.guild))
+      );
+      await interaction.update({
+        content: 'Choose a role to toggle:',
+        components: [row],
+      });
+      return;
+    }
+    
+    // Handle role selection
+    const roleId = selectedValue;
     const member = await interaction.guild.members.fetch(interaction.user.id);
     const role = interaction.guild.roles.cache.get(roleId);
     if (!role) {
@@ -46,12 +84,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await member.roles.add(roleId);
       action = 'added';
     }
-    // Build a new dropdown with no selection (reset)
+    
+    // Rebuild dropdown with updated member counts
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder('Select a role to toggle')
-        .addOptions(ROLE_OPTIONS)
+        .setPlaceholder('Make a selection')
+        .addOptions(buildRoleOptions(interaction.guild))
     );
     await interaction.update({
       content: `Role ${action}: ${role.name}\nChoose a role to toggle:`,
