@@ -1,8 +1,9 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, StringSelectMenuBuilder, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActionRowBuilder, Events } = require('discord.js');
+const { SelectMenuBuilder } = require('@discordjs/builders');
 require('dotenv').config();
 
 console.log("discord.js version:", require('discord.js').version);
-console.log("Has setDefaultValues:", typeof StringSelectMenuBuilder.prototype.setDefaultValues === 'function');
+console.log("Has setDefaultValues:", typeof SelectMenuBuilder.prototype.setDefaultValues === 'function');
 console.log("discord.js path:", require.resolve('discord.js'));
 
 const client = new Client({
@@ -58,7 +59,7 @@ client.on('messageCreate', async (message) => {
   if (message.content === '!test1') {
     const member = await message.guild.members.fetch(message.author.id);
     const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
+      new SelectMenuBuilder()
         .setCustomId('role_select')
         .setPlaceholder('Make a selection')
         .addOptions(buildRoleOptions(message.guild, member, false))
@@ -71,11 +72,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isStringSelectMenu()) return;
   if (interaction.customId === 'role_select') {
     const selectedValue = interaction.values[0];
-    
-    // Handle when Discord's X button is clicked (no values selected)
+      // Handle when Discord's X button is clicked (no values selected)
     if (!selectedValue || selectedValue === '') {
       const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
+        new SelectMenuBuilder()
           .setCustomId('role_select')
           .setPlaceholder('Make a selection')
           .addOptions(buildRoleOptions(interaction.guild, null, false))
@@ -86,11 +86,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
       return;
     }
-    
+
     // Handle clear selection
     if (selectedValue === 'clear_selection') {
       const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
+        new SelectMenuBuilder()
           .setCustomId('role_select')
           .setPlaceholder('Make a selection')
           .addOptions(buildRoleOptions(interaction.guild, null, false))
@@ -123,7 +123,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     
     // Show the selected role with default values (enables Discord's X button)
     const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
+      new SelectMenuBuilder()
         .setCustomId('role_select')
         .setPlaceholder('Make a selection')
         .setDefaultValues([roleId])
