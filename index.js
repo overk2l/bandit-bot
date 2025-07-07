@@ -7,7 +7,7 @@ const client = new Client({
 });
 
 // Function to build role options with member counts (dynamic - all roles)
-function buildRoleOptions(guild, userMember) {
+function buildRoleOptions(guild, userMember, hasSelection = false) {
   const options = [];
   
   // Get all roles except @everyone and bot roles
@@ -17,8 +17,9 @@ function buildRoleOptions(guild, userMember) {
     role.name !== '@everyone'
   );
   
-  // Sort roles by member count (descending) and take only first 23 (save room for clear option)
-  const sortedRoles = roles.sort((a, b) => b.members.size - a.members.size).first(23);
+  // Sort roles by member count (descending) and take only first 23-24 (depending on clear option)
+  const maxRoles = hasSelection ? 24 : 23;
+  const sortedRoles = roles.sort((a, b) => b.members.size - a.members.size).first(maxRoles);
   
   sortedRoles.forEach(role => {
     const memberCount = role.members.size;
@@ -28,12 +29,14 @@ function buildRoleOptions(guild, userMember) {
     });
   });
   
-  // Always add clear selection option
-  options.push({
-    label: '❌ Clear Selection',
-    value: 'clear_selection',
-    description: 'Clear the current selection'
-  });
+  // Add clear selection option only when no selection is made (Discord's X handles clearing when selected)
+  if (!hasSelection) {
+    options.push({
+      label: '❌ Clear Selection',
+      value: 'clear_selection',
+      description: 'Clear the current selection'
+    });
+  }
   
   return options;
 }
@@ -49,7 +52,7 @@ client.on('messageCreate', async (message) => {
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
         .setPlaceholder('Make a selection')
-        .addOptions(buildRoleOptions(message.guild, member))
+        .addOptions(buildRoleOptions(message.guild, member, false))
     );
     await message.channel.send({ content: 'Choose a role to toggle:', components: [row] });
   }
@@ -66,7 +69,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         new StringSelectMenuBuilder()
           .setCustomId('role_select')
           .setPlaceholder('Make a selection')
-          .addOptions(buildRoleOptions(interaction.guild, null))
+          .addOptions(buildRoleOptions(interaction.guild, null, false))
       );
       await interaction.update({
         content: 'Choose a role to toggle:',
@@ -94,12 +97,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       action = 'added';
     }
     
-    // Show the selected role in the placeholder
+    // Show the selected role with default values (enables Discord's X button)
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder(`Selected: ${role.name}`)
-        .addOptions(buildRoleOptions(interaction.guild, member))
+        .setPlaceholder('Make a selection')
+        .setDefaultValues([roleId])
+        .addOptions(buildRoleOptions(interaction.guild, member, true))
     );
     
     await interaction.update({
