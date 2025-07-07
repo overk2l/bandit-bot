@@ -17,7 +17,10 @@ function buildRoleOptions(guild) {
     role.name !== '@everyone'
   );
   
-  roles.forEach(role => {
+  // Sort roles by member count (descending) and take only first 24 (save 1 spot for clear option)
+  const sortedRoles = roles.sort((a, b) => b.members.size - a.members.size).first(24);
+  
+  sortedRoles.forEach(role => {
     const memberCount = role.members.size;
     options.push({
       label: `${role.name} 👤 ${memberCount}`,
