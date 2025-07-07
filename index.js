@@ -3,6 +3,7 @@ require('dotenv').config();
 
 console.log("discord.js version:", require('discord.js').version);
 console.log("Has setDefaultValues:", typeof StringSelectMenuBuilder.prototype.setDefaultValues === 'function');
+console.log("discord.js path:", require.resolve('discord.js'));
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers],
