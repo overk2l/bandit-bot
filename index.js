@@ -6,21 +6,23 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-const ROLE_OPTIONS = [
-  { label: 'Role 1', value: '1370533441724092537' },
-  { label: 'Role 2', value: '1370533436317761546' },
-  { label: 'Role 3', value: '1370533450704224447' }
-];
-
-// Function to build role options with member counts
+// Function to build role options with member counts (dynamic - all roles)
 function buildRoleOptions(guild) {
-  const options = ROLE_OPTIONS.map(roleOption => {
-    const role = guild.roles.cache.get(roleOption.value);
-    const memberCount = role ? role.members.size : 0;
-    return {
-      label: `${roleOption.label} 👤 ${memberCount}`,
-      value: roleOption.value
-    };
+  const options = [];
+  
+  // Get all roles except @everyone and bot roles
+  const roles = guild.roles.cache.filter(role => 
+    !role.managed && // exclude bot roles
+    role.id !== guild.id && // exclude @everyone
+    role.name !== '@everyone'
+  );
+  
+  roles.forEach(role => {
+    const memberCount = role.members.size;
+    options.push({
+      label: `${role.name} 👤 ${memberCount}`,
+      value: role.id
+    });
   });
   
   // Add clear selection option
@@ -85,16 +87,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       action = 'added';
     }
     
-    // Rebuild dropdown with updated member counts
-    const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId('role_select')
-        .setPlaceholder('Make a selection')
-        .addOptions(buildRoleOptions(interaction.guild))
-    );
-    await interaction.update({
-      content: `Role ${action}: ${role.name}\nChoose a role to toggle:`,
-      components: [row],
+    // Send ephemeral confirmation and keep dropdown unchanged
+    await interaction.reply({ 
+      content: `Role ${action}: ${role.name}`, 
+      flags: 64 // ephemeral
     });
   }
 });
