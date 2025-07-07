@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, RoleSelectMenuBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
+require('dotenv').config();
 
 const client = new Client({
     intents: [
@@ -127,5 +128,5 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Replace 'YOUR_BOT_TOKEN' with your actual bot token
+// Use environment variable for bot token
 client.login(process.env.BOT_TOKEN);
