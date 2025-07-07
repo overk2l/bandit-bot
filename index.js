@@ -7,7 +7,7 @@ const client = new Client({
 });
 
 // Function to build role options with member counts (dynamic - all roles)
-function buildRoleOptions(guild, userMember) {
+function buildRoleOptions(guild, userMember, hasSelection = false) {
   const options = [];
   
   // Get all roles except @everyone and bot roles
@@ -17,19 +17,26 @@ function buildRoleOptions(guild, userMember) {
     role.name !== '@everyone'
   );
   
-  // Sort roles by member count (descending) and take only first 24 (save 1 spot for clear option)
-  const sortedRoles = roles.sort((a, b) => b.members.size - a.members.size).first(24);
+  // Sort roles by member count (descending) and take only first 23-24 (depending on if we need clear option)
+  const maxRoles = hasSelection ? 24 : 23;
+  const sortedRoles = roles.sort((a, b) => b.members.size - a.members.size).first(maxRoles);
   
   sortedRoles.forEach(role => {
     const memberCount = role.members.size;
-    const hasRole = userMember.roles.cache.has(role.id);
-    
     options.push({
-      label: hasRole ? `${role.name} ❌` : `${role.name} 👤 ${memberCount}`,
-      value: role.id,
-      description: hasRole ? 'Click to remove this role' : undefined
+      label: `${role.name} 👤 ${memberCount}`,
+      value: role.id
     });
   });
+  
+  // Add clear selection option only if no role is currently selected (Discord's X button handles clearing when selected)
+  if (!hasSelection) {
+    options.push({
+      label: '❌ Clear Selection',
+      value: 'clear_selection',
+      description: 'Clear the current selection'
+    });
+  }
   
   return options;
 }
@@ -45,7 +52,7 @@ client.on('messageCreate', async (message) => {
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
         .setPlaceholder('Make a selection')
-        .addOptions(buildRoleOptions(message.guild, member))
+        .addOptions(buildRoleOptions(message.guild, member, false))
     );
     await message.channel.send({ content: 'Choose a role to toggle:', components: [row] });
   }
@@ -55,6 +62,23 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isStringSelectMenu()) return;
   if (interaction.customId === 'role_select') {
     const selectedValue = interaction.values[0];
+    
+    // Handle clear selection
+    if (selectedValue === 'clear_selection') {
+      const row = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('role_select')
+          .setPlaceholder('Make a selection')
+          .addOptions(buildRoleOptions(interaction.guild, null, false))
+      );
+      await interaction.update({
+        content: 'Choose a role to toggle:',
+        components: [row],
+      });
+      return;
+    }
+    
+    // Handle role selection
     const roleId = selectedValue;
     const member = await interaction.guild.members.fetch(interaction.user.id);
     const role = interaction.guild.roles.cache.get(roleId);
@@ -73,13 +97,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
       action = 'added';
     }
     
-    // Try deferring the update to see if that changes the behavior
-    await interaction.deferUpdate();
+    // Keep the selection visible by setting a default value
+    const row = new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId('role_select')
+        .setPlaceholder('Make a selection')
+        .setDefaultValues([roleId]) // This makes the role show as selected with X button
+        .addOptions(buildRoleOptions(interaction.guild, member, true))
+    );
     
-    // Send a follow-up message instead of updating
-    await interaction.followUp({
-      content: `Role ${action}: ${role.name}`,
-      flags: 64 // ephemeral
+    await interaction.update({
+      content: `Role ${action}: ${role.name}\nChoose a role to toggle:`,
+      components: [row],
     });
   }
 });
