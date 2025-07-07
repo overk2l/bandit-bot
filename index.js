@@ -1,6 +1,9 @@
 const { Client, GatewayIntentBits, Partials, ActionRowBuilder, StringSelectMenuBuilder, Events } = require('discord.js');
 require('dotenv').config();
 
+console.log("discord.js version:", require('discord.js').version);
+console.log("Has setDefaultValues:", typeof StringSelectMenuBuilder.prototype.setDefaultValues === 'function');
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction]
@@ -68,6 +71,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.customId === 'role_select') {
     const selectedValue = interaction.values[0];
     
+    // Handle when Discord's X button is clicked (no values selected)
+    if (!selectedValue || selectedValue === '') {
+      const row = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('role_select')
+          .setPlaceholder('Make a selection')
+          .addOptions(buildRoleOptions(interaction.guild, null, false))
+      );
+      await interaction.update({
+        content: 'Choose a role to toggle:',
+        components: [row],
+      });
+      return;
+    }
+    
     // Handle clear selection
     if (selectedValue === 'clear_selection') {
       const row = new ActionRowBuilder().addComponents(
@@ -102,16 +120,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
       action = 'added';
     }
     
-    // Show the selected role (using placeholder since setDefaultValues isn't available)
+    // Show the selected role with default values (enables Discord's X button)
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder(`✅ Selected: ${role.name}`)
+        .setPlaceholder('Make a selection')
+        .setDefaultValues([roleId])
         .addOptions(buildRoleOptions(interaction.guild, member, true))
     );
     
     await interaction.update({
-      content: `Role ${action}: ${role.name}\nChoose a role to toggle:`,
+      content: 'Choose a role to toggle:',
       components: [row],
     });
   }
