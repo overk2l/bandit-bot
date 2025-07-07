@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, RoleSelectMenuBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, RoleSelectMenuBuilder, EmbedBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -67,7 +67,7 @@ client.on('interactionCreate', async (interaction) => {
             if (interaction.values.length === 0) {
                 await interaction.reply({
                     content: '✅ Selection cleared!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -79,7 +79,7 @@ client.on('interactionCreate', async (interaction) => {
             if (!role) {
                 await interaction.reply({
                     content: '❌ Role not found!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -88,7 +88,7 @@ client.on('interactionCreate', async (interaction) => {
             if (!interaction.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
                 await interaction.reply({
                     content: '❌ I don\'t have permission to manage roles!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -96,7 +96,7 @@ client.on('interactionCreate', async (interaction) => {
             if (role.position >= interaction.guild.members.me.roles.highest.position) {
                 await interaction.reply({
                     content: `❌ I cannot manage the **${role.name}** role because it's higher than or equal to my highest role!`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -108,13 +108,13 @@ client.on('interactionCreate', async (interaction) => {
                 await member.roles.remove(role);
                 await interaction.reply({
                     content: `✅ Removed the **${role.name}** role from you!`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } else {
                 await member.roles.add(role);
                 await interaction.reply({
                     content: `✅ Added the **${role.name}** role to you!`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -122,7 +122,7 @@ client.on('interactionCreate', async (interaction) => {
             console.error('Error handling role selection:', error);
             await interaction.reply({
                 content: '❌ An error occurred while processing your role selection.',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     }
