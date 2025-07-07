@@ -3,6 +3,7 @@ const { SelectMenuBuilder } = require('@discordjs/builders');
 require('dotenv').config();
 
 console.log("discord.js version:", require('discord.js').version);
+console.log("@discordjs/builders version:", require('@discordjs/builders').version);
 console.log("Has setDefaultValues:", typeof SelectMenuBuilder.prototype.setDefaultValues === 'function');
 console.log("discord.js path:", require.resolve('discord.js'));
 
