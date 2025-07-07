@@ -19,7 +19,7 @@ function buildRoleOptions(guild, userMember, hasSelection = false) {
   
   // Sort roles by member count (descending) and take only first 23-24 (depending on clear option)
   const maxRoles = hasSelection ? 24 : 23;
-  const sortedRoles = roles.sort((a, b) => b.members.size - a.members.size).first(maxRoles);
+  const sortedRoles = Array.from(roles.sort((a, b) => b.members.size - a.members.size).values()).slice(0, maxRoles);
   
   sortedRoles.forEach(role => {
     const memberCount = role.members.size;
@@ -29,13 +29,18 @@ function buildRoleOptions(guild, userMember, hasSelection = false) {
     });
   });
   
-  // Add clear selection option only when no selection is made (Discord's X handles clearing when selected)
+  // Add clear selection option only when no selection is made
   if (!hasSelection) {
     options.push({
       label: '❌ Clear Selection',
       value: 'clear_selection',
       description: 'Clear the current selection'
     });
+  }
+  
+  // Safety check - ensure we never exceed 25 options
+  if (options.length > 25) {
+    return options.slice(0, 25);
   }
   
   return options;
@@ -97,12 +102,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       action = 'added';
     }
     
-    // Show the selected role with default values (enables Discord's X button)
+    // Show the selected role (using placeholder since setDefaultValues isn't available)
     const row = new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder('Make a selection')
-        .setDefaultValues([roleId])
+        .setPlaceholder(`✅ Selected: ${role.name}`)
         .addOptions(buildRoleOptions(interaction.guild, member, true))
     );
     
