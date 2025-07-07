@@ -1,9 +1,8 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, StringSelectMenuBuilder, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActionRowBuilder, RoleSelectMenuBuilder, Events } = require('discord.js');
 require('dotenv').config();
 
 console.log("discord.js version:", require('discord.js').version);
-console.log("Has setDefaultValues:", typeof StringSelectMenuBuilder.prototype.setDefaultValues === 'function');
-console.log("StringSelectMenuBuilder methods:", Object.getOwnPropertyNames(StringSelectMenuBuilder.prototype).filter(name => name.includes('default') || name.includes('Default')));
+console.log("Has addDefaultRoles:", typeof RoleSelectMenuBuilder.prototype.addDefaultRoles === 'function');
 console.log("discord.js path:", require.resolve('discord.js'));
 
 const client = new Client({
@@ -11,45 +10,8 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-// Function to build role options with member counts (dynamic - all roles)
-function buildRoleOptions(guild, userMember, hasSelection = false) {
-  const options = [];
-  
-  // Get all roles except @everyone and bot roles
-  const roles = guild.roles.cache.filter(role => 
-    !role.managed && // exclude bot roles
-    role.id !== guild.id && // exclude @everyone
-    role.name !== '@everyone'
-  );
-  
-  // Sort roles by member count (descending) and take only first 23-24 (depending on clear option)
-  const maxRoles = hasSelection ? 24 : 23;
-  const sortedRoles = Array.from(roles.sort((a, b) => b.members.size - a.members.size).values()).slice(0, maxRoles);
-  
-  sortedRoles.forEach(role => {
-    const memberCount = role.members.size;
-    options.push({
-      label: `${role.name} 👤 ${memberCount}`,
-      value: role.id
-    });
-  });
-  
-  // Add clear selection option only when no selection is made
-  if (!hasSelection) {
-    options.push({
-      label: '❌ Clear Selection',
-      value: 'clear_selection',
-      description: 'Clear the current selection'
-    });
-  }
-  
-  // Safety check - ensure we never exceed 25 options
-  if (options.length > 25) {
-    return options.slice(0, 25);
-  }
-  
-  return options;
-}
+// RoleSelectMenuBuilder automatically shows all roles, no need for manual options
+// Just filter out bot roles and @everyone when setting defaults
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -57,82 +19,87 @@ client.once('ready', () => {
 
 client.on('messageCreate', async (message) => {
   if (message.content === '!test1') {
-    const member = await message.guild.members.fetch(message.author.id);
     const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
+      new RoleSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder('Make a selection')
-        .addOptions(buildRoleOptions(message.guild, member, false))
+        .setPlaceholder('Choose roles to toggle')
+        .setMinValues(0)
+        .setMaxValues(25)
     );
-    await message.channel.send({ content: 'Choose a role to toggle:', components: [row] });
+    await message.channel.send({ content: 'Choose roles to toggle:', components: [row] });
   }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isStringSelectMenu()) return;
+  if (!interaction.isRoleSelectMenu()) return;
   if (interaction.customId === 'role_select') {
-    const selectedValue = interaction.values[0];
-      // Handle when Discord's X button is clicked (no values selected)
-    if (!selectedValue || selectedValue === '') {
-      const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId('role_select')
-          .setPlaceholder('Make a selection')
-          .addOptions(buildRoleOptions(interaction.guild, null, false))
-      );
-      await interaction.update({
-        content: 'Choose a role to toggle:',
-        components: [row],
-      });
-      return;
-    }
-
-    // Handle clear selection
-    if (selectedValue === 'clear_selection') {
-      const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId('role_select')
-          .setPlaceholder('Make a selection')
-          .addOptions(buildRoleOptions(interaction.guild, null, false))
-      );
-      await interaction.update({
-        content: 'Choose a role to toggle:',
-        components: [row],
-      });
-      return;
-    }
+    const selectedRoles = interaction.values; // Array of role IDs
+    const member = interaction.member;
+    let message = '';
     
-    // Handle role selection
-    const roleId = selectedValue;
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-    const role = interaction.guild.roles.cache.get(roleId);
+    // Track which roles were added/removed
+    const addedRoles = [];
+    const removedRoles = [];
     
-    if (!role) {
-      await interaction.reply({ content: 'Role not found.', flags: 64 }); // ephemeral
-      return;
+    // Process each selected role
+    for (const roleId of selectedRoles) {
+      const role = interaction.guild.roles.cache.get(roleId);
+      if (!role) continue;
+      
+      if (member.roles.cache.has(roleId)) {
+        // User has this role, remove it
+        try {
+          await member.roles.remove(role);
+          removedRoles.push(role.name);
+        } catch (error) {
+          console.error(`Error removing role ${role.name}:`, error);
+        }
+      } else {
+        // User doesn't have this role, add it
+        try {
+          await member.roles.add(role);
+          addedRoles.push(role.name);
+        } catch (error) {
+          console.error(`Error adding role ${role.name}:`, error);
+        }
+      }
     }
     
-    let action;
-    if (member.roles.cache.has(roleId)) {
-      await member.roles.remove(roleId);
-      action = 'removed';
+    // Build response message
+    const parts = [];
+    if (addedRoles.length > 0) {
+      parts.push(`Added: ${addedRoles.join(', ')}`);
+    }
+    if (removedRoles.length > 0) {
+      parts.push(`Removed: ${removedRoles.join(', ')}`);
+    }
+    
+    if (parts.length === 0) {
+      message = 'No role changes made.';
     } else {
-      await member.roles.add(roleId);
-      action = 'added';
+      message = parts.join(' | ');
     }
     
-    // Show the selected role with default values (enables Discord's X button)
+    // Create updated dropdown with current user's roles as default
+    const userRoleIds = member.roles.cache.filter(role => 
+      !role.managed && // exclude bot roles
+      role.id !== interaction.guild.id && // exclude @everyone
+      role.name !== '@everyone'
+    ).map(role => role.id);
+    
     const row = new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
+      new RoleSelectMenuBuilder()
         .setCustomId('role_select')
-        .setPlaceholder('Make a selection')
-        .setDefaultValues([roleId])
-        .addOptions(buildRoleOptions(interaction.guild, member, true))
+        .setPlaceholder('Choose roles to toggle')
+        .setMinValues(0)
+        .setMaxValues(25)
+        .addDefaultRoles(userRoleIds) // Set current user roles as default
     );
     
-    await interaction.update({
-      content: 'Choose a role to toggle:',
+    await interaction.reply({
+      content: message,
       components: [row],
+      ephemeral: true
     });
   }
 });
