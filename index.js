@@ -5,6 +5,8 @@ require('dotenv').config();
 console.log("discord.js version:", require('discord.js').version);
 console.log("@discordjs/builders version:", require('@discordjs/builders').version);
 console.log("Has setDefaultValues:", typeof SelectMenuBuilder.prototype.setDefaultValues === 'function');
+console.log("SelectMenuBuilder methods:", Object.getOwnPropertyNames(SelectMenuBuilder.prototype).filter(name => name.includes('default') || name.includes('Default')));
+console.log("All SelectMenuBuilder methods:", Object.getOwnPropertyNames(SelectMenuBuilder.prototype));
 console.log("discord.js path:", require.resolve('discord.js'));
 
 const client = new Client({
